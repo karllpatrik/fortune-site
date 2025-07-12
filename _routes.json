@@ -2,7 +2,8 @@
   "version": 1,
   "include": ["/*"],
   "exclude": [
-    "/characters.json",
+    "/characters",
+    "/ask",
     "/bg/*",
     "/items/*"
   ]
