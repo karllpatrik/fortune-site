@@ -25,6 +25,7 @@ export default {
     // API для обработки вопросов
     if (pathname === '/ask' && request.method === 'POST') {
       try {
+        console.log('API keys available:', !!env.GEMINI_API_KEY, !!env.GEMINI_MODEL);
         const { slug, question } = await request.json();
         
         if (!slug || !question) {
@@ -68,7 +69,7 @@ export default {
         return Response.json({ answer });
       } catch (error) {
         console.error('Error in ask function:', error);
-        return new Response('Internal server error', { status: 500 });
+        return new Response(`Internal server error: ${error.message}`, { status: 500 });
       }
     }
 
