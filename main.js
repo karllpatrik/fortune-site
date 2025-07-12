@@ -4,7 +4,7 @@ let isAsked = false;
 
 async function loadCharacters() {
     try {
-        const response = await fetch('/api/characters');
+        const response = await fetch('/characters.json');
         charactersData = await response.json();
     } catch (error) {
         console.error('Failed to load characters:', error);
