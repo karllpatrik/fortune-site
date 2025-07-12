@@ -26,6 +26,10 @@ export default {
     if (pathname === '/ask' && request.method === 'POST') {
       try {
         console.log('API keys available:', !!env.GEMINI_API_KEY, !!env.GEMINI_MODEL);
+        
+        if (!env.GEMINI_API_KEY || !env.GEMINI_MODEL) {
+          return new Response('Missing API configuration', { status: 500 });
+        }
         const { slug, question } = await request.json();
         
         if (!slug || !question) {
@@ -42,7 +46,6 @@ export default {
         const body = {
           contents: [
             { 
-              role: "user", 
               parts: [{ text: `${personaPrompt}\n\nВопрос: ${question}` }] 
             }
           ]
@@ -60,7 +63,9 @@ export default {
         );
 
         if (!response.ok) {
-          throw new Error(`Gemini API error: ${response.status}`);
+          const errorData = await response.text();
+          console.error('Gemini API error:', response.status, errorData);
+          throw new Error(`Gemini API error: ${response.status} - ${errorData}`);
         }
 
         const data = await response.json();
