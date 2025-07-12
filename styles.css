@@ -166,6 +166,12 @@ body {
     opacity: 0.6;
     cursor: not-allowed;
     transform: none;
+    background: linear-gradient(135deg, #666 0%, #999 100%);
+}
+
+#ask-button:disabled:after {
+    content: "⏳";
+    margin-left: 5px;
 }
 
 .hidden {

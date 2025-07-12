@@ -1,6 +1,7 @@
 let charactersData = null;
 let currentCharacter = null;
 let isAsked = false;
+let isWaitingForAnswer = false;
 
 async function loadCharacters() {
     try {
@@ -41,6 +42,87 @@ function hideInput() {
     document.getElementById('input-container').style.display = 'none';
 }
 
+function showWaitingState() {
+    const button = document.getElementById('ask-button');
+    const input = document.getElementById('question-input');
+    
+    button.textContent = 'Ожидаем ответ...';
+    button.disabled = true;
+    input.disabled = true;
+    isWaitingForAnswer = true;
+}
+
+function resetToInitialState() {
+    const button = document.getElementById('ask-button');
+    const input = document.getElementById('question-input');
+    const messagesContainer = document.getElementById('messages');
+    const inputContainer = document.getElementById('input-container');
+    
+    // Очищаем сообщения
+    messagesContainer.innerHTML = '';
+    
+    // Сбрасываем состояние кнопки и инпута
+    button.textContent = 'Спросить';
+    button.disabled = false;
+    input.disabled = false;
+    input.value = '';
+    
+    // Показываем контейнер ввода
+    inputContainer.style.display = 'flex';
+    
+    // Сбрасываем флаги
+    isAsked = false;
+    isWaitingForAnswer = false;
+    
+    // Показываем приветствие заново
+    if (charactersData && currentCharacter) {
+        const character = charactersData[currentCharacter];
+        addMessage(character.greeting);
+    }
+}
+
+async function askQuestionWithRetry(question, maxRetries = 5) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            const response = await fetch('/ask', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    slug: currentCharacter,
+                    question: question
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok && data.answer) {
+                addMessage(data.answer);
+                hideInput();
+                return;
+            } else {
+                console.warn(`Попытка ${attempt} не удалась:`, data);
+                if (attempt === maxRetries) {
+                    addMessage('Магический предмет не может ответить прямо сейчас. Попробуйте позже.');
+                    hideInput();
+                    return;
+                }
+            }
+        } catch (error) {
+            console.error(`Попытка ${attempt} не удалась:`, error);
+            if (attempt === maxRetries) {
+                addMessage('Произошла ошибка при обращении к магическому предмету.');
+                hideInput();
+                return;
+            }
+        }
+        
+        // Небольшая задержка перед повторной попыткой
+        await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+}
+
 async function askQuestion() {
     if (isAsked) return;
     
@@ -50,28 +132,10 @@ async function askQuestion() {
     if (!question) return;
     
     addMessage(question, true);
+    showWaitingState();
     isAsked = true;
     
-    try {
-        const response = await fetch('/ask', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                slug: currentCharacter,
-                question: question
-            })
-        });
-        
-        const data = await response.json();
-        addMessage(data.answer);
-        hideInput();
-    } catch (error) {
-        console.error('Failed to ask question:', error);
-        addMessage('Произошла ошибка при обращении к магическому предмету.');
-        hideInput();
-    }
+    await askQuestionWithRetry(question);
 }
 
 function init() {
@@ -92,7 +156,9 @@ function init() {
         const character = charactersData[slug];
         
         setBackground(`/items/${slug}/image.jpg`);
-        addMessage(character.greeting);
+        
+        // Сбрасываем к начальному состоянию при загрузке/перезагрузке
+        resetToInitialState();
         
         document.getElementById('ask-button').addEventListener('click', askQuestion);
         document.getElementById('question-input').addEventListener('keypress', (e) => {
