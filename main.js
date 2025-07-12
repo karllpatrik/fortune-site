@@ -4,7 +4,7 @@ let isAsked = false;
 
 async function loadCharacters() {
     try {
-        const response = await fetch('/characters.json');
+        const response = await fetch('/characters');
         charactersData = await response.json();
     } catch (error) {
         console.error('Failed to load characters:', error);
@@ -53,7 +53,7 @@ async function askQuestion() {
     isAsked = true;
     
     try {
-        const response = await fetch('/api/ask', {
+        const response = await fetch('/ask', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
