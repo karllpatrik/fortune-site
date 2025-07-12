@@ -46,7 +46,7 @@ function showWaitingState() {
     const button = document.getElementById('ask-button');
     const input = document.getElementById('question-input');
     
-    button.textContent = 'Ожидаем ответ...';
+    button.innerHTML = 'Ожидаем ответ... ⏳';
     button.disabled = true;
     input.disabled = true;
     isWaitingForAnswer = true;
