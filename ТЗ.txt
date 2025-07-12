@@ -1,0 +1,122 @@
+Собери в репозитории fortune-site одностраничный проект, который 
+
+0. Контекст и допущения
+Проект fortune-site уже создан в GitHub и привязан к Cloudflare Pages (preset = None, build command = exit 0).
+
+В репозитории в корне лежит папка items/ со структурами для каждого магического предмета:
+
+sql
+Копировать
+Редактировать
+items/
+ ├─ magic-lamp/
+ │   ├─ first msg.txt        # приветствие
+ │   ├─ first prompt.txt     # системный промпт для LLM
+ │   └─ image.jpg            # фон
+ └─ crystal-ball/
+     ├─ first msg.txt
+     ├─ first prompt.txt
+     └─ image.jpg
+В Cloudflare Pages заданы переменные окружения
+
+GEMINI_API_KEY — Secret
+
+GEMINI_MODEL — "gemini-1.5-flash" (обычное значение)
+
+1. Цели генерации кода
+Автоматически прочитать все подпапки в items/ и сформировать единый characters.json, вида:
+
+json
+Копировать
+Редактировать
+{
+  "magic-lamp": {
+    "greeting": "... содержимое first msg.txt ...",
+    "personaPrompt": "... содержимое first prompt.txt ...",
+    "bg": "/bg/magic-lamp.jpg"
+  },
+  "crystal-ball": { ... }
+}
+Скопировать каждый image.jpg в /public/bg/<slug>.jpg.
+
+Создать одностраничное HTML-приложение (index.html + main.js + styles.css) со следующей логикой:
+
+Шаг	Фронтенд-действие
+1	Определить slug из location.pathname (/magic-lamp → magic-lamp; пустой путь → 404).
+2	Подтянуть данные персонажа из characters.json.
+3	Показать фон bg, вывести приветствие (greeting) в первом bubble диалога.
+4	Показать инпут + кнопку «Спросить».
+5	При нажатии → POST /ask { slug, question }.
+6	Получить JSON {"answer":"…"} → вывести вторым bubble.
+7	Заблокировать инпут и кнопку (одноразовый диалог).
+
+Создать Pages Function /functions/ask.js:
+
+js
+Копировать
+Редактировать
+export async function onRequest({ request, env }) {
+  const { slug, question } = await request.json();
+  const { personaPrompt } = CHAR_DATA[slug] ?? {};
+  if (!personaPrompt) return new Response("Unknown slug", {status:404});
+  
+  const body = {
+    model: env.GEMINI_MODEL,
+    messages: [
+      {role:"system", content: personaPrompt},
+      {role:"user", content: question}
+    ]
+  };
+
+  const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+env.GEMINI_MODEL+":generateContent", {
+    method:"POST",
+    headers:{ "Content-Type":"application/json", "Authorization":"Bearer "+env.GEMINI_API_KEY },
+    body: JSON.stringify(body)
+  });
+  const data = await res.json();
+  const answer = data.candidates?.[0]?.content || "…";
+  return Response.json({ answer });
+}
+Импорт CHAR_DATA получить путём import characters from "../data/characters.json" assert { type: "json" }.
+
+Добавить локальный dev-режим: если запущено wrangler pages dev, всё работает без интернета (кроме вызова LLM).
+
+2. Стиль и UX
+Компонент	Правила
+CSS	Один файл styles.css, фиолетово-бирюзовая палитра, неоновое свечение у bubble персонажа.
+Приветствие	Максимальная ширина контейнера 600 px, авто-scroll, WCAG AA контраст.
+Шрифты	Подключить PT Sans из Google Fonts.
+404	Если slug не найден — показать страницу «Предмет не распознан» с ссылкой «Вернуться».
+
+3. Структура файлов, которую должен сгенерировать Claude
+bash
+Копировать
+Редактировать
+/characters.json          # автом. генерируется скриптом
+/index.html
+/main.js
+/styles.css
+/functions/ask.js
+/scripts/build.js         # node-скрипт, собирает characters.json + копирует bg
+/public/
+  └─ bg/
+      ├─ magic-lamp.jpg
+      └─ crystal-ball.jpg
+/items/…                  # остаётся как источник
+Скрипт build.js запускается локально командой node scripts/build.js или автоматически перед коммитом (pre-commit hook).
+
+4. Защита секретов
+Никаких строк с API-ключом в репозитории.
+
+В коде обращаться только через env.GEMINI_API_KEY.
+
+Для локальной разработки — файл .dev.vars (игнорируется .gitignore).
+
+5. Проверочные задачи для Claude Code
+Сгенерируй всё вышеперечисленное.
+
+Добавь npm-скрипт "build:data": "node scripts/build.js" и хук Husky pre-commit для автосборки.
+
+Создай README.md с инструкциями «как добавить новый предмет» (достаточно положить новую подпапку в items/ и закоммитить).
+
+Выдай файл .gitignore, который исключает .dev.vars, node_modules/, .DS_Store.

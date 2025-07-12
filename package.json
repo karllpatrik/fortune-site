@@ -1,0 +1,23 @@
+{
+  "name": "fortune-site",
+  "version": "1.0.0",
+  "description": "Магические предметы - интерактивный сайт с AI персонажами",
+  "main": "index.html",
+  "scripts": {
+    "build:data": "node scripts/build.js",
+    "dev": "wrangler pages dev . --port 8788",
+    "prepare": "husky install"
+  },
+  "keywords": [
+    "magic",
+    "ai",
+    "cloudflare",
+    "pages"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "husky": "^8.0.3",
+    "wrangler": "^4.24.3"
+  }
+}
