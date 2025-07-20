@@ -155,7 +155,7 @@ function init() {
         currentCharacter = slug;
         const character = charactersData[slug];
         
-        setBackground(`/items/${slug}/image.jpg`);
+        setBackground(character.bg || `/items/${slug}/image.jpg`);
         
         // Сбрасываем к начальному состоянию при загрузке/перезагрузке
         resetToInitialState();
