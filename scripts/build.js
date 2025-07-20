@@ -26,26 +26,54 @@ function buildCharacters() {
 
   for (const slug of itemDirs) {
     const itemPath = path.join(ITEMS_DIR, slug);
-    const greetingPath = path.join(itemPath, 'first msg.txt');
-    const promptPath = path.join(itemPath, 'first prompt.txt');
+    
+    // Поддержка как старого, так и нового формата файлов
+    const greetingPath = fs.existsSync(path.join(itemPath, 'privetstvie.txt')) 
+      ? path.join(itemPath, 'privetstvie.txt')
+      : path.join(itemPath, 'first msg.txt');
+    
+    const promptPath = fs.existsSync(path.join(itemPath, 'prompt.txt'))
+      ? path.join(itemPath, 'prompt.txt') 
+      : path.join(itemPath, 'first prompt.txt');
+    
     const imagePath = path.join(itemPath, 'image.jpg');
-
-    if (fs.existsSync(greetingPath) && fs.existsSync(promptPath) && fs.existsSync(imagePath)) {
+    
+    // Проверяем наличие основных файлов
+    if (fs.existsSync(greetingPath) && fs.existsSync(promptPath)) {
       const greeting = fs.readFileSync(greetingPath, 'utf-8').trim();
       const personaPrompt = fs.readFileSync(promptPath, 'utf-8').trim();
+      
+      let bgPath;
+      if (fs.existsSync(imagePath)) {
+        // Если есть индивидуальное изображение
+        ensureDir(BG_DIR);
+        const destImagePath = path.join(BG_DIR, `${slug}.jpg`);
+        fs.copyFileSync(imagePath, destImagePath);
+        bgPath = `/bg/${slug}.jpg`;
+        console.log(`Copied ${slug}/image.jpg -> public/bg/${slug}.jpg`);
+      } else {
+        // Используем общее изображение для фона
+        const commonImagePath = path.join(ITEMS_DIR, 'изображение для фона.jpg');
+        if (fs.existsSync(commonImagePath)) {
+          ensureDir(BG_DIR);
+          const destImagePath = path.join(BG_DIR, 'изображение для фона.jpg');
+          if (!fs.existsSync(destImagePath)) {
+            fs.copyFileSync(commonImagePath, destImagePath);
+            console.log('Copied common background image');
+          }
+          bgPath = '/изображение для фона.jpg';
+        } else {
+          bgPath = `/bg/${slug}.jpg`; // fallback
+        }
+      }
       
       characters[slug] = {
         greeting,
         personaPrompt,
-        bg: `/bg/${slug}.jpg`
+        bg: bgPath
       };
-
-      ensureDir(BG_DIR);
-      const destImagePath = path.join(BG_DIR, `${slug}.jpg`);
-      fs.copyFileSync(imagePath, destImagePath);
-      console.log(`Copied ${slug}/image.jpg -> public/bg/${slug}.jpg`);
     } else {
-      console.warn(`Skipping ${slug}: missing required files`);
+      console.warn(`Skipping ${slug}: missing required files (greeting: ${fs.existsSync(greetingPath)}, prompt: ${fs.existsSync(promptPath)})`);
     }
   }
 
