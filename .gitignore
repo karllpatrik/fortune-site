@@ -142,4 +142,4 @@ vite.config.ts.timestamp-*
 .DS_Store
 .dev.vars
 characters.json
-public/
+public/characters.json
