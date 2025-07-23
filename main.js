@@ -111,8 +111,13 @@ async function askQuestionWithRetry(question, maxRetries = 5) {
             }
         } catch (error) {
             console.error(`Попытка ${attempt} не удалась:`, error);
+            console.error('Детали ошибки:', {
+                name: error.name,
+                message: error.message,
+                stack: error.stack
+            });
             if (attempt === maxRetries) {
-                addMessage('Произошла ошибка при обращении к магическому предмету.');
+                addMessage('Произошла ошибка при обращении к магическому предмету. Возможно, требуется VPN.');
                 hideInput();
                 return;
             }
