@@ -40,14 +40,13 @@ export default {
     // API для обработки вопросов
     if (pathname === '/ask' && request.method === 'POST') {
       try {
-        console.log('API keys available:', !!env.GEMINI_API_KEY, !!env.GEMINI_MODEL);
-        console.log('GEMINI_API_KEY value:', env.GEMINI_API_KEY ? 'SET' : 'NOT SET');
-        console.log('GEMINI_MODEL value:', env.GEMINI_MODEL ? env.GEMINI_MODEL : 'NOT SET');
+        console.log('API keys available:', !!env.YANDEX_API_KEY);
+        console.log('YANDEX_API_KEY value:', env.YANDEX_API_KEY ? 'SET' : 'NOT SET');
         console.log('All env vars:', Object.keys(env));
         
         const { slug, question } = await request.json();
         
-        if (!env.GEMINI_API_KEY || !env.GEMINI_MODEL) {
+        if (!env.YANDEX_API_KEY) {
           // Временный mock ответ для тестирования с задержкой
           await new Promise(resolve => setTimeout(resolve, 2000)); // 2 секунды задержки
           
@@ -80,33 +79,41 @@ export default {
 
         const { personaPrompt } = character;
         
-        const body = {
-          contents: [
-            { 
-              parts: [{ text: `${personaPrompt}\n\nВопрос: ${question}` }] 
-            }
-          ]
-        };
-
+        console.log("=== _WORKER.JS USING YANDEX API ===");
+        
         const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${env.GEMINI_MODEL}:generateContent?key=${env.GEMINI_API_KEY}`,
+          'https://llm.api.cloud.yandex.net/foundationModels/v1/completion',
           {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
+              'Authorization': `Api-Key ${env.YANDEX_API_KEY}`
             },
-            body: JSON.stringify(body)
+            body: JSON.stringify({
+              modelUri: 'gpt://foundationModels/yandexgpt-pro',
+              completionOptions: { 
+                stream: false, 
+                maxTokens: 1024 
+              },
+              messages: [
+                { role: 'system', text: personaPrompt },
+                { role: 'user', text: question }
+              ]
+            })
           }
         );
 
+        console.log("_worker.js Yandex API status:", response.status);
+
         if (!response.ok) {
           const errorData = await response.text();
-          console.error('Gemini API error:', response.status, errorData);
-          throw new Error(`Gemini API error: ${response.status} - ${errorData}`);
+          console.error('Yandex API error:', response.status, errorData);
+          throw new Error(`Yandex API error: ${response.status} - ${errorData}`);
         }
 
         const data = await response.json();
-        const answer = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Магический предмет не отвечает...';
+        console.log("_worker.js Yandex response:", JSON.stringify(data, null, 2));
+        const answer = data.result?.alternatives?.[0]?.message?.text || 'Магический предмет не отвечает...';
 
         return Response.json({ answer });
       } catch (error) {
