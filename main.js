@@ -95,7 +95,19 @@ async function askQuestionWithRetry(question, maxRetries = 5) {
                 })
             });
             
-            const data = await response.json();
+            let data;
+            try {
+                data = await response.json();
+            } catch (jsonError) {
+                // Если ответ не JSON (например, HTML страница ошибки)
+                console.error(`Попытка ${attempt}: Сервер вернул не JSON`, response.status, response.statusText);
+                if (attempt === maxRetries) {
+                    addMessage('Произошла ошибка при обращении к магическому предмету. Возможно, требуется VPN.');
+                    hideInput();
+                    return;
+                }
+                continue; // Переходим к следующей попытке
+            }
             
             if (response.ok && data.answer) {
                 addMessage(data.answer);

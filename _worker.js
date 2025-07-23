@@ -111,7 +111,7 @@ export default {
         return Response.json({ answer });
       } catch (error) {
         console.error('Error in ask function:', error);
-        return new Response(`Internal server error: ${error.message}`, { status: 500 });
+        return Response.json({ error: `Internal server error: ${error.message}` }, { status: 500 });
       }
     }
 

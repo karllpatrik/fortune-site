@@ -119,7 +119,13 @@ export async function onRequest({ request, env }) {
             });
           }
         }
-        lastError = `Gemini API error: ${geminiResponse.status}`;
+        const errorData = await geminiResponse.json().catch(() => ({}));
+        if (geminiResponse.status === 429) {
+          // Квота исчерпана, переходим к следующему API
+          lastError = `Gemini API quota exceeded`;
+        } else {
+          lastError = `Gemini API error: ${geminiResponse.status}`;
+        }
       } catch (error) {
         lastError = `Gemini API error: ${error.message}`;
       }
