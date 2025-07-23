@@ -114,7 +114,11 @@ async function askQuestionWithRetry(question, maxRetries = 2) {
                 hideInput();
                 return;
             } else {
-                console.warn(`Попытка ${attempt} не удалась:`, data);
+                console.warn(`Попытка ${attempt} не удалась:`, {
+                    status: response.status,
+                    statusText: response.statusText,
+                    data: data
+                });
                 if (attempt === maxRetries) {
                     addMessage('Магический предмет не может ответить прямо сейчас. Попробуйте позже.');
                     hideInput();

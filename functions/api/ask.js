@@ -49,7 +49,7 @@ export async function onRequest({ request, env }) {
     }
 
     // Проверяем наличие API ключей
-    if (!env.GEMINI_API_KEY && !env.OPENAI_API_KEY && !env.ANTHROPIC_API_KEY) {
+    if (!env.GEMINI_GATEWAY_URL && !env.OPENAI_API_KEY && !env.ANTHROPIC_API_KEY) {
       // Mock ответ для случая отсутствия API ключей
       const mockResponses = [
         'Звёзды говорят: ваш путь полон возможностей! ✨',
@@ -67,11 +67,11 @@ export async function onRequest({ request, env }) {
     let response;
     let lastError;
 
-    // 1. Пробуем Gemini API
-    if (env.GEMINI_API_KEY) {
+    // 1. Пробуем Gemini API через Gateway
+    if (env.GEMINI_GATEWAY_URL) {
       try {
         const geminiResponse = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${env.GEMINI_API_KEY}`,
+          env.GEMINI_GATEWAY_URL,
           {
             method: 'POST',
             headers: {
