@@ -90,7 +90,7 @@ export default {
               'Authorization': `Api-Key ${env.YANDEX_API_KEY}`
             },
             body: JSON.stringify({
-              modelUri: 'gpt://foundationModels/yandexgpt-pro',
+              modelUri: 'gpt://b1g3kju7tm68q2q1ebea/yandexgpt-lite/latest',
               completionOptions: { 
                 stream: false, 
                 maxTokens: 1024 
