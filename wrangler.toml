@@ -13,11 +13,6 @@ ENVIRONMENT = "production"
 # GEMINI_API_KEY = установить через: wrangler secret put GEMINI_API_KEY --env production
 # GEMINI_MODEL = установить через: wrangler secret put GEMINI_MODEL --env production
 
-# Настройки для Cloudflare Pages
-[build]
-command = "npm run build:data"
-cwd = "."
-
 # Настройки для локальной разработки
 [vars]
 ENVIRONMENT = "development"
