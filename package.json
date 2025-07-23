@@ -6,6 +6,9 @@
   "scripts": {
     "build:data": "node scripts/build.js",
     "dev": "wrangler pages dev . --port 8788",
+    "deploy": "./deploy.sh",
+    "deploy:prod": "wrangler pages deploy . --project-name fortune-site",
+    "secrets:set": "echo 'Настройте секреты: wrangler secret put GEMINI_API_KEY && wrangler secret put GEMINI_MODEL'",
     "prepare": "husky install"
   },
   "keywords": [

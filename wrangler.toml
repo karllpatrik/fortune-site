@@ -1,0 +1,23 @@
+name = "fortune-site"
+compatibility_date = "2024-07-15"
+pages_build_output_dir = "."
+
+[env.production]
+compatibility_date = "2024-07-15"
+
+# Переменные окружения для продакшена
+[env.production.vars]
+ENVIRONMENT = "production"
+
+# Секреты (устанавливаются через wrangler secret put)
+# GEMINI_API_KEY = установить через: wrangler secret put GEMINI_API_KEY --env production
+# GEMINI_MODEL = установить через: wrangler secret put GEMINI_MODEL --env production
+
+# Настройки для Cloudflare Pages
+[build]
+command = "npm run build:data"
+cwd = "."
+
+# Настройки для локальной разработки
+[vars]
+ENVIRONMENT = "development"
