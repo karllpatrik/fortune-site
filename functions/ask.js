@@ -36,45 +36,81 @@ export async function onRequest({ request, env }) {
     const { slug, question } = await request.json();
     
     if (!slug || !question) {
-      return new Response('Missing slug or question', { status: 400 });
+      return Response.json({
+        error: 'Missing required fields'
+      }, { status: 400 });
     }
 
     const character = characters[slug];
     if (!character) {
-      return new Response('Unknown slug', { status: 404 });
+      return Response.json({
+        error: 'Character not found'
+      }, { status: 404 });
     }
 
-    const { personaPrompt } = character;
-    
-    const body = {
-      contents: [
-        { 
-          parts: [{ text: `${personaPrompt}\n\nВопрос: ${question}` }] 
+    // Используем только Yandex API
+    if (!env.YANDEX_API_KEY) {
+      return Response.json({
+        error: 'Yandex API key not configured'
+      }, { status: 503 });
+    }
+
+    console.log("=== TRYING YANDEX API ===");
+    try {
+      const yandexResponse = await fetch(
+        'https://llm.api.cloud.yandex.net/foundationModels/v1/completion',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Api-Key ${env.YANDEX_API_KEY}`
+          },
+          body: JSON.stringify({
+            modelUri: 'gpt://foundationModels/yandexgpt-pro',
+            completionOptions: { 
+              stream: false, 
+              maxTokens: 1024 
+            },
+            messages: [
+              { role: 'system', text: character.personaPrompt },
+              { role: 'user', text: question }
+            ]
+          })
         }
-      ]
-    };
+      );
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${env.GEMINI_MODEL}:generateContent?key=${env.GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body)
+      console.log("Yandex API response status:", yandexResponse.status);
+
+      if (yandexResponse.ok) {
+        const data = await yandexResponse.json();
+        console.log("Yandex API response data:", JSON.stringify(data, null, 2));
+        
+        if (data.result && data.result.alternatives && data.result.alternatives[0]) {
+          console.log("=== YANDEX API SUCCESS ===");
+          return Response.json({
+            answer: data.result.alternatives[0].message.text.trim()
+          });
+        }
       }
-    );
-
-    if (!response.ok) {
-      throw new Error(`Gemini API error: ${response.status}`);
+      
+      console.log("Yandex API failed with status:", yandexResponse.status);
+      const errorText = await yandexResponse.text();
+      console.log("Yandex API error:", errorText);
+      
+      return Response.json({
+        error: `Yandex API error: ${yandexResponse.status} - ${errorText}`
+      }, { status: 503 });
+      
+    } catch (error) {
+      console.log("Yandex API exception:", error.message);
+      return Response.json({
+        error: `Yandex API error: ${error.message}`
+      }, { status: 503 });
     }
 
-    const data = await response.json();
-    const answer = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Магический предмет не отвечает...';
-
-    return Response.json({ answer });
   } catch (error) {
-    console.error('Error in ask function:', error);
-    return new Response('Internal server error', { status: 500 });
+    return Response.json({
+      error: 'Internal server error'
+    }, { status: 500 });
   }
 }
