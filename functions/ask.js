@@ -66,7 +66,7 @@ export async function onRequest({ request, env }) {
             'Authorization': `Api-Key ${env.YANDEX_API_KEY}`
           },
           body: JSON.stringify({
-            modelUri: 'gpt://b1g3kju7tm68q2q1ebea/yandexgpt-pro/latest',
+            modelUri: 'gpt://b1g3kju7tm68q2q1ebea/yandexgpt/latest',
             completionOptions: { 
               stream: false, 
               maxTokens: 1024 
