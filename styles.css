@@ -27,7 +27,7 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    background-image: url('bg/изображение для фона.jpg');
+    background-image: url('bg/background.jpg');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
