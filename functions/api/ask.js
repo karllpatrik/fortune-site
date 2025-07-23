@@ -111,7 +111,7 @@ export async function onRequest({ request, env }) {
           }
         );
 
-        if (response.ok) {
+        if (geminiResponse.ok) {
           const data = await geminiResponse.json();
           if (data.candidates && data.candidates[0] && data.candidates[0].content) {
             return Response.json({
