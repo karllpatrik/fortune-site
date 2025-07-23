@@ -48,211 +48,65 @@ export async function onRequest({ request, env }) {
       }, { status: 404 });
     }
 
-    // Проверяем наличие API ключей
-    if (!env.GEMINI_GATEWAY_URL && !env.OPENAI_API_KEY && !env.ANTHROPIC_API_KEY && !env.YANDEX_API_KEY) {
-      // Mock ответ для случая отсутствия API ключей
-      const mockResponses = [
-        'Звёзды говорят: ваш путь полон возможностей! ✨',
-        'Карты шепчут: доверьтесь интуиции в этом вопросе 🔮',
-        'Магический шар видит: успех придет к тому, кто действует смело! 💫',
-        'Древние знания гласят: терпение - ключ к решению 🗝️'
-      ];
-      
+    // Используем только Yandex API
+    if (!env.YANDEX_API_KEY) {
       return Response.json({
-        answer: mockResponses[Math.floor(Math.random() * mockResponses.length)]
-      });
+        error: 'Yandex API key not configured'
+      }, { status: 503 });
     }
 
-    // Пытаемся использовать доступные API в порядке приоритета
-    let response;
-    let lastError;
-
-    // 1. Пробуем Yandex API (работает в России)
-    if (env.YANDEX_API_KEY) {
-      try {
-        console.log("Trying Yandex API...");
-        const yandexResponse = await fetch(
-          'https://llm.api.cloud.yandex.net/foundationModels/v1/completion',
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Api-Key ${env.YANDEX_API_KEY}`
-            },
-            body: JSON.stringify({
-              modelUri: 'gpt://foundationModels/yandexgpt-pro',
-              completionOptions: { 
-                stream: false, 
-                maxTokens: 1024 
-              },
-              messages: [
-                { role: 'system', text: character.personaPrompt },
-                { role: 'user', text: question }
-              ]
-            })
-          }
-        );
-
-        if (yandexResponse.ok) {
-          const data = await yandexResponse.json();
-          if (data.result && data.result.alternatives && data.result.alternatives[0]) {
-            console.log("Yandex API success!");
-            return Response.json({
-              answer: data.result.alternatives[0].message.text.trim()
-            });
-          }
-        }
-        lastError = `Yandex API error: ${yandexResponse.status}`;
-      } catch (error) {
-        lastError = `Yandex API error: ${error.message}`;
-      }
-    }
-
-    // 2. Пробуем Gemini API через Gateway
-    if (env.GEMINI_GATEWAY_URL) {
-      try {
-        console.log("Gateway URL:", env.GEMINI_GATEWAY_URL.slice(0, 80));
-        const geminiResponse = await fetch(
-          env.GEMINI_GATEWAY_URL,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              contents: [{
-                parts: [{
-                  text: `${character.personaPrompt} ${question}`
-                }]
-              }],
-              generationConfig: {
-                temperature: 0.9,
-                topK: 1,
-                topP: 1,
-                maxOutputTokens: 2048,
-              },
-              safetySettings: [
-                {
-                  category: "HARM_CATEGORY_HARASSMENT",
-                  threshold: "BLOCK_MEDIUM_AND_ABOVE"
-                },
-                {
-                  category: "HARM_CATEGORY_HATE_SPEECH", 
-                  threshold: "BLOCK_MEDIUM_AND_ABOVE"
-                },
-                {
-                  category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-                  threshold: "BLOCK_MEDIUM_AND_ABOVE"
-                },
-                {
-                  category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-                  threshold: "BLOCK_MEDIUM_AND_ABOVE"
-                }
-              ]
-            })
-          }
-        );
-
-        if (geminiResponse.ok) {
-          const data = await geminiResponse.json();
-          if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-            return Response.json({
-              answer: data.candidates[0].content.parts[0].text.trim()
-            });
-          }
-        }
-        const errorData = await geminiResponse.json().catch(() => ({}));
-        if (geminiResponse.status === 429) {
-          // Квота исчерпана, переходим к следующему API
-          lastError = `Gemini API quota exceeded`;
-        } else {
-          lastError = `Gemini API error: ${geminiResponse.status}`;
-        }
-      } catch (error) {
-        lastError = `Gemini API error: ${error.message}`;
-      }
-    }
-
-    // 3. Пробуем OpenAI API
-    if (env.OPENAI_API_KEY) {
-      try {
-        const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+    console.log("=== TRYING YANDEX API ===");
+    try {
+      const yandexResponse = await fetch(
+        'https://llm.api.cloud.yandex.net/foundationModels/v1/completion',
+        {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${env.OPENAI_API_KEY}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            model: 'gpt-3.5-turbo',
-            messages: [
-              {
-                role: 'system',
-                content: character.personaPrompt
-              },
-              {
-                role: 'user',
-                content: question
-              }
-            ],
-            temperature: 0.9,
-            max_tokens: 1000
-          })
-        });
-
-        if (openaiResponse.ok) {
-          const data = await openaiResponse.json();
-          if (data.choices && data.choices[0] && data.choices[0].message) {
-            return Response.json({
-              answer: data.choices[0].message.content.trim()
-            });
-          }
-        }
-        lastError = `OpenAI API error: ${openaiResponse.status}`;
-      } catch (error) {
-        lastError = `OpenAI API error: ${error.message}`;
-      }
-    }
-
-    // 4. Пробуем Anthropic Claude API
-    if (env.ANTHROPIC_API_KEY) {
-      try {
-        const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: {
-            'x-api-key': env.ANTHROPIC_API_KEY,
             'Content-Type': 'application/json',
-            'anthropic-version': '2023-06-01'
+            'Authorization': `Api-Key ${env.YANDEX_API_KEY}`
           },
           body: JSON.stringify({
-            model: 'claude-3-sonnet-20240229',
-            max_tokens: 1000,
+            modelUri: 'gpt://foundationModels/yandexgpt-pro',
+            completionOptions: { 
+              stream: false, 
+              maxTokens: 1024 
+            },
             messages: [
-              {
-                role: 'user',
-                content: `${character.personaPrompt} ${question}`
-              }
+              { role: 'system', text: character.personaPrompt },
+              { role: 'user', text: question }
             ]
           })
-        });
-
-        if (anthropicResponse.ok) {
-          const data = await anthropicResponse.json();
-          if (data.content && data.content[0] && data.content[0].text) {
-            return Response.json({
-              answer: data.content[0].text.trim()
-            });
-          }
         }
-        lastError = `Anthropic API error: ${anthropicResponse.status}`;
-      } catch (error) {
-        lastError = `Anthropic API error: ${error.message}`;
-      }
-    }
+      );
 
-    // Если все API не сработали, возвращаем ошибку
-    return Response.json({
-      error: `All APIs failed. Last error: ${lastError}`
-    }, { status: 503 });
+      console.log("Yandex API response status:", yandexResponse.status);
+
+      if (yandexResponse.ok) {
+        const data = await yandexResponse.json();
+        console.log("Yandex API response data:", JSON.stringify(data, null, 2));
+        
+        if (data.result && data.result.alternatives && data.result.alternatives[0]) {
+          console.log("=== YANDEX API SUCCESS ===");
+          return Response.json({
+            answer: data.result.alternatives[0].message.text.trim()
+          });
+        }
+      }
+      
+      console.log("Yandex API failed with status:", yandexResponse.status);
+      const errorText = await yandexResponse.text();
+      console.log("Yandex API error:", errorText);
+      
+      return Response.json({
+        error: `Yandex API error: ${yandexResponse.status} - ${errorText}`
+      }, { status: 503 });
+      
+    } catch (error) {
+      console.log("Yandex API exception:", error.message);
+      return Response.json({
+        error: `Yandex API error: ${error.message}`
+      }, { status: 503 });
+    }
 
   } catch (error) {
     return Response.json({
