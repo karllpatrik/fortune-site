@@ -41,6 +41,9 @@ export default {
     if (pathname === '/ask' && request.method === 'POST') {
       try {
         console.log('API keys available:', !!env.GEMINI_API_KEY, !!env.GEMINI_MODEL);
+        console.log('GEMINI_API_KEY value:', env.GEMINI_API_KEY ? 'SET' : 'NOT SET');
+        console.log('GEMINI_MODEL value:', env.GEMINI_MODEL ? env.GEMINI_MODEL : 'NOT SET');
+        console.log('All env vars:', Object.keys(env));
         
         const { slug, question } = await request.json();
         
