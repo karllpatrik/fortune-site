@@ -81,7 +81,7 @@ function resetToInitialState() {
     }
 }
 
-async function askQuestionWithRetry(question, maxRetries = 5) {
+async function askQuestionWithRetry(question, maxRetries = 2) {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             const response = await fetch('/ask', {
@@ -135,8 +135,8 @@ async function askQuestionWithRetry(question, maxRetries = 5) {
             }
         }
         
-        // Небольшая задержка перед повторной попыткой
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Увеличенная задержка перед повторной попыткой
+        await new Promise(resolve => setTimeout(resolve, 3000));
     }
 }
 
