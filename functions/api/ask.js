@@ -49,7 +49,7 @@ export async function onRequest({ request, env }) {
     }
 
     // Проверяем наличие API ключей
-    if (!env.GEMINI_GATEWAY_URL && !env.OPENAI_API_KEY && !env.ANTHROPIC_API_KEY) {
+    if (!env.GEMINI_GATEWAY_URL && !env.OPENAI_API_KEY && !env.ANTHROPIC_API_KEY && !env.YANDEX_API_KEY) {
       // Mock ответ для случая отсутствия API ключей
       const mockResponses = [
         'Звёзды говорят: ваш путь полон возможностей! ✨',
@@ -67,9 +67,49 @@ export async function onRequest({ request, env }) {
     let response;
     let lastError;
 
-    // 1. Пробуем Gemini API через Gateway
+    // 1. Пробуем Yandex API (работает в России)
+    if (env.YANDEX_API_KEY) {
+      try {
+        const yandexResponse = await fetch(
+          'https://llm.api.cloud.yandex.net/foundationModels/v1/completion',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Api-Key ${env.YANDEX_API_KEY}`
+            },
+            body: JSON.stringify({
+              modelUri: 'gpt://foundationModels/yandexgpt-pro',
+              completionOptions: { 
+                stream: false, 
+                maxTokens: 1024 
+              },
+              messages: [
+                { role: 'system', text: character.personaPrompt },
+                { role: 'user', text: question }
+              ]
+            })
+          }
+        );
+
+        if (yandexResponse.ok) {
+          const data = await yandexResponse.json();
+          if (data.result && data.result.alternatives && data.result.alternatives[0]) {
+            return Response.json({
+              answer: data.result.alternatives[0].message.text.trim()
+            });
+          }
+        }
+        lastError = `Yandex API error: ${yandexResponse.status}`;
+      } catch (error) {
+        lastError = `Yandex API error: ${error.message}`;
+      }
+    }
+
+    // 2. Пробуем Gemini API через Gateway
     if (env.GEMINI_GATEWAY_URL) {
       try {
+        console.log("Gateway URL:", env.GEMINI_GATEWAY_URL.slice(0, 80));
         const geminiResponse = await fetch(
           env.GEMINI_GATEWAY_URL,
           {
@@ -131,7 +171,7 @@ export async function onRequest({ request, env }) {
       }
     }
 
-    // 2. Пробуем OpenAI API
+    // 3. Пробуем OpenAI API
     if (env.OPENAI_API_KEY) {
       try {
         const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -171,7 +211,7 @@ export async function onRequest({ request, env }) {
       }
     }
 
-    // 3. Пробуем Anthropic Claude API
+    // 4. Пробуем Anthropic Claude API
     if (env.ANTHROPIC_API_KEY) {
       try {
         const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
