@@ -87,8 +87,7 @@ export default {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Api-Key ${env.YANDEX_API_KEY}`,
-              'x-folder-id': 'b1g3kju7tm68q2q1ebea'
+              'Authorization': `Api-Key ${env.YANDEX_API_KEY}`
             },
             body: JSON.stringify({
               modelUri: 'gpt://b1g3kju7tm68q2q1ebea/yandexgpt-pro',
