@@ -70,6 +70,7 @@ export async function onRequest({ request, env }) {
     // 1. Пробуем Yandex API (работает в России)
     if (env.YANDEX_API_KEY) {
       try {
+        console.log("Trying Yandex API...");
         const yandexResponse = await fetch(
           'https://llm.api.cloud.yandex.net/foundationModels/v1/completion',
           {
@@ -95,6 +96,7 @@ export async function onRequest({ request, env }) {
         if (yandexResponse.ok) {
           const data = await yandexResponse.json();
           if (data.result && data.result.alternatives && data.result.alternatives[0]) {
+            console.log("Yandex API success!");
             return Response.json({
               answer: data.result.alternatives[0].message.text.trim()
             });
