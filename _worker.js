@@ -46,7 +46,7 @@ export default {
         
         const { slug, question } = await request.json();
         
-        if (!env.YANDEX_API_KEY || true) { // временно включены mock-ответы
+        if (!env.YANDEX_API_KEY) {
           // Временный mock ответ для тестирования с задержкой
           await new Promise(resolve => setTimeout(resolve, 2000)); // 2 секунды задержки
           
